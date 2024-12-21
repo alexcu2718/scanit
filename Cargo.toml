@@ -1,0 +1,29 @@
+[package]
+name = "scanit"
+version = "0.1.178"
+edition = "2021"
+description = "A fast file scanner utility that uses regex patterns to find files in your filesystem, BLAZINGLY FAST PERHAPS??????????????????????????????????????????"
+license = "MIT"
+authors = ["Alexander Curtis alexcu@tutanota.com"]
+homepage = "https://github.com/alexcu2718"
+documentation = "https://docs.rs/scanit"
+readme = "README.md"
+keywords = ["files", "search", "regex", "scanner", "filesystem"]
+categories = ["filesystem", "command-line-utilities"]
+
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = 'abort'
+strip = true
+debug = false
+target-cpu = "native"
+
+
+[dependencies]
+regex = "1.11.1"
+scandir = "2.8.0"
+clap = { version = "4.4", features = ["derive"] }
+
