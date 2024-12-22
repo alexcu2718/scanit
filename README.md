@@ -1,14 +1,21 @@
 # scanit
 This is my first rust project, it's got rough edges!
 
+
 A command line utility that recursively searches directories for files matching regex patterns.
+
+
+I HAVE NOT TESTED THIS ON WINDOWS, IT'S TO DO!
+
+
+(accidentally wiped my windows install and i'm not doing it on VM)
 
 Examples:
 scanit \.rs$ -d /usr         # Find Rust files in /usr
 
 scanit '\.png$' --C          # Find PNG files from current directory
 
-scanit '^test.*\.js$'        # Find JavaScript files starting with 'test'
+scanit '^/.*test.*\.js$'        # Find JavaScript files starting with 'test'
 
 scanit -H '\.git'            # Find hidden git files
 

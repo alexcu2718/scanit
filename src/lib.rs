@@ -1,23 +1,32 @@
-use scandir::{Walk, Toc};
 use std::error::Error;
 use regex::Regex;
+use jwalk::WalkDir;
 
-pub fn find_files(pattern: &str, directory: &str,show_hidden:bool) -> Result<(), Box<dyn Error>> {
-    const PATH_PREFIX: &str = if cfg!(windows) { "" } else { "/" };
-    let re: Regex = Regex::new(pattern)?;
+pub fn find_files(pattern: &str, directory: &str,show_hidden:bool) -> Result<(), Box<dyn Error + 'static>> {
+   
+    let mut matches = Vec::new();
+    let re = Regex::new(pattern)?;
 
-    
-  
-    let  mut walk: Walk = Walk::new(directory, Some(true))?
-    .skip_hidden(!show_hidden);
-    let toc: Toc = walk.collect()?;
-
-    for file in toc.files() {
-        if re.is_match(&file) {
-            let full_path: String = format!("{}{}", PATH_PREFIX, file);
-            println!("{}", full_path);
+    for entry in WalkDir::new(directory).skip_hidden(!show_hidden) {
+        match entry {
+            Ok(e) => {
+                let path = e.path().to_string_lossy().into_owned();
+                if re.is_match(&path) {
+                    matches.push(path);
+                }
+            },
+            Err(e) if e.to_string().contains("Permission denied") => {
+                //skipped += 1;
+                continue
+            },
+            Err(e) => return Err(Box::new(e))
         }
     }
 
+    for path in &matches {
+        println!("{}", path);
+    }
+   
+    
     Ok(())
 }

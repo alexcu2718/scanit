@@ -1,11 +1,27 @@
 [package]
 name = "scanit"
-version = "0.1.178"
+version = "0.1.9"
 edition = "2021"
-description = "A fast file scanner utility that uses regex patterns to find files in your filesystem, BLAZINGLY FAST PERHAPS??????????????????????????????????????????"
+description = """
+A fast file scanner utility that uses regex patterns to find files in your filesystem. 
+
+
+This is my first project.
+
+
+Changelog (v0.1.9):
+- Reduced dependencies by half.
+- Increased speed by a factor of almost 2.
+
+
+Please suggest any changes on GitHub!
+"""
+
+
 license = "MIT"
 authors = ["Alexander Curtis alexcu@tutanota.com"]
 homepage = "https://github.com/alexcu2718"
+repository="https://github.com/alexcu2718/scanit"
 documentation = "https://docs.rs/scanit"
 readme = "README.md"
 keywords = ["files", "search", "regex", "scanner", "filesystem"]
@@ -24,6 +40,6 @@ target-cpu = "native"
 
 [dependencies]
 regex = "1.11.1"
-scandir = "2.8.0"
 clap = { version = "4.4", features = ["derive"] }
+jwalk = "0.8.1"
 
