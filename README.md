@@ -60,7 +60,9 @@ scanit '\.rs$' -d /usr
 
 ## Find PNG files from current directory
 
-scanit '\.png$' -C
+scanit '\.png$' -c
+
+(or equivalently, scanit '\.png$' --current-directory)
 
 ## Find JavaScript test files
 
@@ -68,11 +70,11 @@ scanit '^/.*test.*\.js$'
 
 ## Find hidden git files
 
-scanit -H '\.git'
+scanit -a '\.git'
 
 ## Search all dirs and file names for a pattern eg zshrc
 
-scanit zshrc -H -I
+scanit zshrc -h -i
 
 (or equivalently, scanit zshrc --show-hidden --include-dirs)
 
@@ -93,8 +95,8 @@ Arguments:
 | Option | Description | Default |
 |:-------|:-----------|:--------|
 | `-d, --directory <DIR>` | Starting directory | `/` (Unix), `C:/` (Windows) |
-| `-C, --cd` | Use current directory | - |
-| `-H, --hidden` | Show hidden files | - |
+| `-c, --cd` | Use current directory | - |
+| `-a, --show-hidden` | Show hidden files | - |
 | `-h, --help` | Show help | - |
 | `-V, --version` | Show version | - |
-| `-I,--include-dirs | Include directories in search pattern | Not including dirs|
+| `-i,--include-dirs | Include directories in search pattern | Not including dirs|
