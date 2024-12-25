@@ -99,4 +99,4 @@ Arguments:
 | `-a, --show-hidden` | Show hidden files | - |
 | `-h, --help` | Show help | - |
 | `-V, --version` | Show version | - |
-| `-i ,--include-dirs | Include directories in search pattern | Not including dirs|
+| `-i  --include-dirs | Include directories in search pattern | Not including dirs|
