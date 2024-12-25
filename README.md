@@ -21,7 +21,7 @@ cargo install scanit
 
 ## 📝 Changelog
 
-### [0.1.98]
+### [0.1.99]
 
 #### Fixed
 
@@ -74,7 +74,7 @@ scanit -a '\.git'
 
 ## Search all dirs and file names for a pattern eg zshrc
 
-scanit zshrc -h -i
+scanit zshrc -a -i
 
 (or equivalently, scanit zshrc --show-hidden --include-dirs)
 
