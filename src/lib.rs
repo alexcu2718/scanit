@@ -1,3 +1,5 @@
+
+
 use std::error::Error;
 use regex::Regex;
 use jwalk::WalkDir;
@@ -6,26 +8,21 @@ pub fn find_files(pattern: &str, directory: &str,show_hidden:bool) -> Result<(),
    
     let mut matches = Vec::new();
     let re = Regex::new(pattern)?;
-
     for entry in WalkDir::new(directory).skip_hidden(!show_hidden) {
         match entry {
             Ok(e) => {
-                let path = e.path().to_string_lossy().into_owned();
-                if re.is_match(&path) {
-                    matches.push(path);
+                if let Some(path) = e.path().to_str() {
+                    if re.is_match(path) {
+                        matches.push(path.to_owned());
+                    }
                 }
             },
-            Err(e) if e.to_string().contains("Permission denied") => {
-                //skipped += 1;
-                continue
-            },
-            Err(e) => return Err(Box::new(e))
+           
+            Err(_) => {continue}
         }
     }
 
-    for path in &matches {
-        println!("{}", path);
-    }
+    println!("{}", matches.join("\n"));
    
     
     Ok(())

@@ -1,30 +1,49 @@
-# scanit
-This is my first rust project, it's got rough edges!
+# scanit 🔍
+
+[![Rust](https://img.shields.io/badge/rust-stable-brightgreen.svg)](https://www.rust-lang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A command-line utility that recursively searches directories for files matching regex patterns.
+
+## 🚀 Features
+
+- Recursive directory scanning
+- Regex pattern matching
+- Hidden file support
+- Cross-platform compatibility (Unix paths)
+- Current directory search option
+
+## ⚙️ Installation
+
+```bash
+cargo install scanit
+```
+
+## Examples
+
+## Find Rust files in /usr
+
+scanit '\.rs$' -d /usr
+
+## Find PNG files from current directory
+
+scanit '\.png$' -C
+
+## Find JavaScript test files
+
+scanit '^/.*test.*\.js$'
+
+## Find hidden git files
+
+scanit -H '\.git'
 
 
-A command line utility that recursively searches directories for files matching regex patterns.
+Supports Unix and in theory windows, not tested yet! VM's are buggy!
 
 
-I HAVE NOT TESTED THIS ON WINDOWS, IT'S TO DO!
-
-
-(accidentally wiped my windows install and i'm not doing it on VM)
-
-Examples:
-scanit \.rs$ -d /usr         # Find Rust files in /usr
-
-scanit '\.png$' --C          # Find PNG files from current directory
-
-scanit '^/.*test.*\.js$'        # Find JavaScript files starting with 'test'
-
-scanit -H '\.git'            # Find hidden git files
-
-scanit -V                    # Show version number
-
-
-Supports Unix and Windows paths automatically.
 
 Usage: scanit [OPTIONS] <PATTERN>
+
 
 Arguments:
   <PATTERN>
