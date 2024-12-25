@@ -1,6 +1,6 @@
 [package]
 name = "scanit"
-version = "0.2.0.0"
+version = "0.2.0"
 edition = "2021"
 description = """
 A fast file scanner utility that uses regex patterns to find files in your filesystem. 

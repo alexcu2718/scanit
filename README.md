@@ -23,7 +23,7 @@ cargo install scanit
 
 ## 📝 Changelog
 
-### [0.2.0.0]
+### verion=[0.2.0]
 
 #### Fixed
 
