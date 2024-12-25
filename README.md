@@ -31,7 +31,6 @@ cargo install scanit
 
 #### Changed
 
-- Updated error messages to be more descriptive
 - Improved performance when handling permission denied errors
 
 ## 🔧 Dependencies
