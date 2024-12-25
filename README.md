@@ -5,12 +5,14 @@
 
 A command-line utility that recursively searches directories for files matching regex patterns.
 
+Notably this is my first RUST cli and first time using git
+
 ## 🚀 Features
 
 - Recursive directory scanning
 - Regex pattern matching
 - Hidden file support
-- Cross-platform compatibility (Unix paths) (Possibly windows but not tested')
+- Cross-platform compatibility (Unix paths) (Possibly windows but not tested!)
 - Current directory search option
 
 ## ⚙️ Installation
@@ -21,13 +23,14 @@ cargo install scanit
 
 ## 📝 Changelog
 
-### [0.1.99]
+### [0.2.0.0]
 
 #### Fixed
 
 - Reduced redundant conversion errors when scanning restricted paths
 - Improved error handling for kernel-protected directories
 - Optimized path traversal logic
+- Fixed README.md
 - Added new CLI argument for including dirs in searching, defaults to off
 
 #### Changed
@@ -90,7 +93,7 @@ Usage: scanit [OPTIONS] <PATTERN>
 Arguments:
   <PATTERN>
           Regex pattern to match files (e.g. \\.rs$)
-          
+
 ### Options
 
 | Option | Description | Default |
