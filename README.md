@@ -19,6 +19,21 @@ A command-line utility that recursively searches directories for files matching 
 cargo install scanit
 ```
 
+## 📝 Changelog
+
+### [0.1.95]
+
+#### Fixed
+
+- Reduced redundant conversion errors when scanning restricted paths
+- Improved error handling for kernel-protected directories
+- Optimized path traversal logic
+
+#### Changed
+
+- Updated error messages to be more descriptive
+- Improved performance when handling permission denied errors
+
 ## 🔧 Dependencies
 
 | Dependency | Version | Description |
