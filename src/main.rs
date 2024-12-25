@@ -32,7 +32,9 @@ struct Args {
     #[arg(short='H', long="show-hidden", help="Shows hidden files eg .gitignore or .bashrc")]
     hval: bool,
     #[arg(short='V', long="version", help="Show version number", action=clap::ArgAction::SetTrue)]
-    version: bool
+    version: bool,
+    #[arg(short='D', long="include-dirs", help="Include directories in regex")]
+    dirs: bool
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -50,6 +52,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     
 
 
-    scanit::find_files(args.pattern.as_deref().unwrap(), &args.directory, args.hval)?;
+    scanit::find_files(
+        args.pattern.as_deref().unwrap(), &args.directory, args.hval,args.dirs)?;
     Ok(())
 }
