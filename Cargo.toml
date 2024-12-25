@@ -15,7 +15,7 @@ homepage = "https://github.com/alexcu2718"
 repository="https://github.com/alexcu2718/scanit"
 documentation = "https://docs.rs/scanit"
 readme = "README.md"
-keywords = ["files", "search", "regex", "scanner", "filesystem","file finder"]
+keywords = ["files", "search", "regex", "scanner", "filesystem"]
 categories = ["filesystem", "command-line-utilities"]
 
 
