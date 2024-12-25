@@ -10,7 +10,7 @@ A command-line utility that recursively searches directories for files matching 
 - Recursive directory scanning
 - Regex pattern matching
 - Hidden file support
-- Cross-platform compatibility (Unix paths)
+- Cross-platform compatibility (Unix paths) (Possibly windows but not tested')
 - Current directory search option
 
 ## ⚙️ Installation
@@ -18,6 +18,21 @@ A command-line utility that recursively searches directories for files matching 
 ```bash
 cargo install scanit
 ```
+
+## 🔧 Dependencies
+
+| Dependency | Version | Description |
+|:-----------|:--------|:------------|
+| [regex](https://crates.io/crates/regex) | 1.11.1 | Regular expression pattern matching |
+| [clap](https://crates.io/crates/clap) | 4.4 | Command line argument parsing |
+| [jwalk](https://crates.io/crates/jwalk) | 0.8.1 | Fast parallel directory traversal |
+
+Special thanks to:
+
+jwalk - For the excellent parallel directory traversal
+regex - For the powerful regex engine
+clap - For the robust CLI argument parsing
+
 
 ## Examples
 
