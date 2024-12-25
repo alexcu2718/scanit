@@ -30,7 +30,10 @@ cargo install scanit
 Special thanks to:
 
 jwalk - For the excellent parallel directory traversal
+
 regex - For the powerful regex engine
+
+
 clap - For the robust CLI argument parsing
 
 
