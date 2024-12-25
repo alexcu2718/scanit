@@ -37,6 +37,7 @@ scanit '^/.*test.*\.js$'
 
 scanit -H '\.git'
 
+##
 
 Supports Unix and in theory windows, not tested yet! VM's are buggy!
 
@@ -50,19 +51,10 @@ Arguments:
           Regex pattern to match files (e.g. \\.rs$)
 
 Options:
-  -d, --directory <DIRECTORY>
-          Starting directory for search
-          [default: /] if linux/mac
-          [default: C:/] if windows
 
-  -C, --cd
-          Use current directory for search
-
-  -H, --hidden
-          Show hidden files (e.g. .gitignore, .bashrc)
-
-  -h, --help
-          Print help information
-
-  -V, --version
-          Print version information
+Option	Description	Default
+-d, --directory <DIR>	Starting directory	/ (Unix), C:/ (Windows)
+-C, --cd	Use current directory	-
+-H, --hidden	Show hidden files	-
+-h, --help	Show help	-
+-V, --version	Show version	
