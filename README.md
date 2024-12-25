@@ -21,13 +21,14 @@ cargo install scanit
 
 ## 📝 Changelog
 
-### [0.1.95]
+### [0.1.98]
 
 #### Fixed
 
 - Reduced redundant conversion errors when scanning restricted paths
 - Improved error handling for kernel-protected directories
 - Optimized path traversal logic
+- Added new CLI argument for including dirs in searching, defaults to off
 
 #### Changed
 
@@ -69,6 +70,12 @@ scanit '^/.*test.*\.js$'
 
 scanit -H '\.git'
 
+## Search all dirs and file names for a pattern eg zshrc
+
+scanit zshrc -H -I
+
+(or equivalently, scanit zshrc --show-hidden --include-dirs)
+
 ##
 
 Supports Unix and in theory windows, not tested yet! VM's are buggy!
@@ -90,3 +97,4 @@ Arguments:
 | `-H, --hidden` | Show hidden files | - |
 | `-h, --help` | Show help | - |
 | `-V, --version` | Show version | - |
+| `-I,--include-dirs | Include directories in search pattern | Not including dirs|
