@@ -49,12 +49,12 @@ Usage: scanit [OPTIONS] <PATTERN>
 Arguments:
   <PATTERN>
           Regex pattern to match files (e.g. \\.rs$)
+### Options
 
-Options:
-
-Option	Description	Default
--d, --directory <DIR>	Starting directory	/ (Unix), C:/ (Windows)
--C, --cd	Use current directory	-
--H, --hidden	Show hidden files	-
--h, --help	Show help	-
--V, --version	Show version	
+| Option | Description | Default |
+|:-------|:-----------|:--------|
+| `-d, --directory <DIR>` | Starting directory | `/` (Unix), `C:/` (Windows) |
+| `-C, --cd` | Use current directory | - |
+| `-H, --hidden` | Show hidden files | - |
+| `-h, --help` | Show help | - |
+| `-V, --version` | Show version | - |
