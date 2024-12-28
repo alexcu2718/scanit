@@ -27,7 +27,7 @@ struct Args {
     pattern: Option<String>,
     #[arg(short, long, default_value = START_PREFIX)]
     directory: String,
-    #[arg(short='c', long="current-directory", conflicts_with="directory", help="Uses the current directory to load")]
+    #[arg(short='c', long="current-directory", conflicts_with="directory", help="Uses the current directory to load",default_value="false")]
     cd: bool,
     #[arg(short='a', long="show-hidden", help="Shows hidden files eg .gitignore or .bashrc")]
     hval: bool,
@@ -40,16 +40,22 @@ struct Args {
 fn main() -> Result<(), Box<dyn Error>> {
     let mut args: Args = Args::parse();
 
+    //println!("Debug: cd flag = {}", args.cd);
+    //println!("Debug: directory before = {}", args.directory);
+
+
     if args.version {
         println!("scanit {}", VERSION);
         std::process::exit(0);
     };
 
     if args.cd {
-        args.directory = ".".into();
+        args.directory = std::env::current_dir()?
+            .to_string_lossy()
+            .to_string();
     };
-
     
+   // println!("Debug: directory after = {}", args.directory);
 
 
     scanit::find_files(
