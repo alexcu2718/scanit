@@ -23,7 +23,13 @@ cargo install scanit
 
 ## 📝 Changelog
 
-### verion=[0.2.0]
+### version=[0.2.1]
+
+#### Changes
+
+- Fixed working directory commandline options
+
+### version=[0.2.0]
 
 #### Fixed
 
@@ -51,9 +57,7 @@ jwalk - For the excellent parallel directory traversal
 
 regex - For the powerful regex engine
 
-
 clap - For the robust CLI argument parsing
-
 
 ## Examples
 
@@ -83,8 +87,8 @@ scanit zshrc -a -i
 
 ##
 
-Supports Unix and in theory windows, not tested yet! VM's are buggy!
 
+Supports Unix and in theory windows, not tested yet! VM's are buggy!
 
 
 Usage: scanit [OPTIONS] <PATTERN>
