@@ -48,12 +48,15 @@ Better error handling
 
 It should be a lot faster now!
 Changed main directory traversing library to ignore.
+
 Simplified CLI arguments for directory to eg scanit \.py$ [DIRECTORY] (defaults to root)
+
 I have not investigate how it works on Windows for this release yet!
 
 ### version=[0.2.5]
 
 Changed underlying structure to better enable use as a library.
+
 Mostly, this means that now the find files returns an Iterator, which allows the collect method(or iteration)
 
 Added a case-insensitivity option.
@@ -61,10 +64,6 @@ Added a case-insensitivity option.
 Increased performance again, roughly about 30% on my limited tests
 
 Lowered Rust Version required to 1.74.1 for people on older Rust versions.
-
-#### Changed
-
-- Improved performance when handling permission denied errors
 
 ## 🔧 Dependencies
 
