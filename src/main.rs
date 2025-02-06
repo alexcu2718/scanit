@@ -100,7 +100,7 @@ fn main() -> io::Result<()> {
        args.keep_dirs,
        args.keep_sys_paths,
        args.max_depth)?;
-    eprintln!("{}",args.thread_num);
+    //eprintln!("{}",args.thread_num);
 
     write_paths(files, args.top_n)?;
    
