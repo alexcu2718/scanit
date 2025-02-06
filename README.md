@@ -25,6 +25,8 @@ cargo install scanit
 
 Added a different memory allocator for Linux, this should speed up processing.
 
+It is a lot faster, also rewrote the printing function I used.
+
 Added configuration options:
 
 - Regex escape option, -r, you may need to wrap your expression in quotes/semi-quotes.
@@ -40,8 +42,8 @@ Added configuration options:
 - Thread count control (-n)
 - Depth limit (-d)
 - Result limit (-t)
-Changed memory allocator to jemalloc
-Added vectored writes for output
+
+
 Better error handling
 
 ### Version=[0.3.0]
