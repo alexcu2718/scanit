@@ -43,7 +43,6 @@ Added configuration options:
 - Depth limit (-d)
 - Result limit (-t)
 
-
 Better error handling
 
 ### Version=[0.3.0]
@@ -75,6 +74,7 @@ Lowered Rust Version required to 1.74.1 for people on older Rust versions.
 | [clap](https://crates.io/crates/clap) | 4.5.27 | Command line argument parsing |
 | [ignore](https://crates.io/crates/ignore) | 0.4.23 | Fast parallel directory traversal |
 | [jemallocator](https://crates.io/crates/jemallocator) | 0.5.4| Memory allocation optimisation |
+| [arcstr](https://crates.io/crates/arcstr) | 1.2.0| Better reference counted string types |
 
 ## Examples
 

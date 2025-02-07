@@ -3,7 +3,6 @@
 #![allow(clippy::single_char_lifetime_names)]
 #![allow(clippy::single_call_fn)]
 #![allow(clippy::question_mark_used)]
-#![allow(clippy::min_ident_chars)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::fn_params_excessive_bools)]
 #![allow(clippy::struct_excessive_bools)]
@@ -29,7 +28,6 @@
 #[global_allocator]
 pub static ALLOCATOR: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
-use std::sync::Arc;
 pub use std::path::Path;
 pub use ignore::{DirEntry, ParallelVisitor, ParallelVisitorBuilder, WalkBuilder, WalkState};
 pub use regex::{Regex, RegexBuilder,Error as RegexError};
@@ -37,35 +35,10 @@ pub use std::io;
 pub use std::process::exit as process_exit;
 pub use std::sync::mpsc::{channel as unbounded,IntoIter,SendError,Sender};
 pub use std::env::current_dir;
+pub use arcstr::ArcStr;
+mod constants;
+pub use constants::{AVOID,START_PREFIX,DOT_PATTERN,DEPTH_CHECK,FLUSH_THRESHOLD,BUFFER_SIZE,NEWLINE,ESCAPE_REGEX};
 
-/// Constant pattern used for matching all files
-/// also used to go into current dir.
-pub const DOT_PATTERN: &str = ".";
-
-
-
-///Default Start Prefix to use
-#[cfg(unix)]
-pub const START_PREFIX: &str = "/";
-#[cfg(windows)]
-pub const START_PREFIX: &str = r"C:/";
-
-/// System paths to avoid during file scanning
-#[cfg(unix)]
-pub const AVOID: [&str; 6] = ["/proc", "/sys", "/tmp", "/run", "/dev", "/sbin"];
-/// INTERNAL HEURISTIC USED FOR AVOIDING SYSPATHS
-#[cfg(unix)]
-const DEPTH_CHECK: usize = 1;
-
-/// System paths to avoid during file scanning
-#[cfg(windows)]
-pub const AVOID: [&str; 4] = [r"C:\Windows\System32",r"C:\Windows\SysWOW64",r"C:\Windows\Temp",r"C:\$Recycle.Bin"];
-/// INTERNAL HEURISTIC USED FOR AVOIDING SYSPATHS
-#[cfg(windows)]
-const DEPTH_CHECK:usize=3;
-
-/// A type alias for thread-safe string references
-pub type StaticStr = Arc<str>;
 
 /// Checks if a given path should be excluded from system paths
 /// 
@@ -78,31 +51,21 @@ pub type StaticStr = Arc<str>;
 #[allow(clippy::inline_always)]
 #[inline(always)]
 fn avoid_sys_paths(filepath: &Path) -> bool {
-    !AVOID.iter().any(|x| filepath.starts_with(x) )
+    !AVOID.iter().any(|pathname| filepath.starts_with(pathname) )
 }
     
 
-
-/// Converts a directory entry to a string path if it matches the directory filter
-/// 
-/// # Arguments
-/// * `pathname` - The directory entry to convert
-/// * `keep_dirs` - Whether to include directory paths
-/// 
-/// # Returns
-/// * `Some(&str)` containing the path if it should be included
-/// * `None` if the path should be excluded
+#[doc(hidden)]
 #[allow(clippy::inline_always)]
 #[inline(always)]
-fn pathtostring(pathname: &DirEntry, keep_dirs: bool) -> Option<&str> {
+fn path_to_str(pathname: &DirEntry, keep_dirs: bool) -> Option<&str> {
     if !keep_dirs && pathname.file_type()?.is_dir() {
         return None;
     }
     pathname.path().to_str()
 }
 
-
-
+#[doc(hidden)]
 #[inline(never)]
 #[cold]
 pub fn handle_regex_error(pattern: &str, error: &RegexError)->!  {
@@ -111,29 +74,18 @@ pub fn handle_regex_error(pattern: &str, error: &RegexError)->!  {
 }
 
 
-
-
-/// Processes a file path against regex pattern and sends matches through channel
-/// 
-/// # Arguments
-/// * `filename` - The path to process
-/// * `re` - Optional regex pattern to match against
-/// * `tx` - Channel sender for matched paths
-/// * `is_dot` - Whether to match all files
-/// 
-/// # Returns
-/// * `WalkState` indicating whether to continue or skip
+#[doc(hidden)]
 #[allow(clippy::inline_always)]
 #[inline(always)]
 fn process_file(
     filename: &str,
     re: Option<&Regex>,
-    tx: &Sender<StaticStr>,
+    tx: &Sender<ArcStr>,
     is_dot: bool,
 ) -> WalkState {
     
-    if is_dot || re.is_some_and(|r| r.is_match(filename)) {
-        match tx.send(Arc::from(filename)) {
+    if is_dot || re.is_some_and(|search| search.is_match(filename)) {
+        match tx.send(ArcStr::from(filename)) {
             Ok(()) => WalkState::Continue,
             Err(_) => WalkState::Skip
         }
@@ -142,31 +94,17 @@ fn process_file(
     }
 }
 
-
-/// Builder for parallel file walker visitors
-/// 
-/// # Fields
-/// * `tx` - Channel sender for matched paths
-/// * `re` - Regex pattern for matching files
-/// * `is_dot` - Flag for matching all files
-/// * `keep_dirs` - Flag for including directories
+#[doc(hidden)]
 struct FileWalkerBuilder<'a> {
-    tx: Sender<StaticStr>,
+    tx: Sender<ArcStr>,
     re: Option<&'a Regex>,
     is_dot: bool,
     keep_dirs: bool,
 }
 
-
-/// Visitor implementation for parallel file walking
-/// 
-/// # Fields
-/// * `tx` - Channel sender for matched paths
-/// * `re` - Regex pattern for matching files
-/// * `is_dot` - Flag for matching all files
-/// * `keep_dirs` - Flag for including directories
+#[doc(hidden)]
 struct FileWalkerVisitor<'a> {
-    tx: Sender<StaticStr>,
+    tx: Sender<ArcStr>,
     re: Option<&'a Regex>,
     is_dot: bool,
     keep_dirs: bool,
@@ -175,11 +113,11 @@ struct FileWalkerVisitor<'a> {
 
 impl ParallelVisitor for FileWalkerVisitor<'_> {
 
-    #[allow(clippy::inline_always)]
-    #[inline(always)]
+    
+    #[inline]
     fn visit(&mut self, entry: Result<DirEntry, ignore::Error>) -> WalkState {
         if let Ok(entry_path) = entry {
-            if let Some(filename) = pathtostring(&entry_path, self.keep_dirs) {
+            if let Some(filename) = path_to_str(&entry_path, self.keep_dirs) {
                 return process_file(filename, self.re, &self.tx, self.is_dot);
             }
         }
@@ -254,17 +192,15 @@ pub fn find_files_iter(
     keep_dirs: bool,
     keep_sys_paths: bool,
     max_depth: Option<usize>,
-) ->  Result<IntoIter<StaticStr>, io::Error> {
-    let (tx, rx) = unbounded::<StaticStr>();
+) ->  Result<IntoIter<ArcStr>, io::Error> {
+    let (tx, rx) = unbounded::<ArcStr>();
     let is_dot = pattern == DOT_PATTERN;
-    let re: Option<Regex> = if is_dot {
-        None
+    let re: Option<Regex> = if is_dot {None
     } else {
-        let regex = RegexBuilder::new(pattern)
+        Some(RegexBuilder::new(pattern)
         .case_insensitive(case_sensitive)
         .build()
-        .unwrap_or_else(|e| handle_regex_error(pattern, &e));
-        Some(regex)
+        .unwrap_or_else(|e| handle_regex_error(pattern, &e)))
     };
     WalkBuilder::new(path)
         .hidden(!hide_hidden)
@@ -356,6 +292,6 @@ pub fn find_files(
         keep_dirs,
         keep_sys_paths,
         max_depth,
-    )?.map(|x| x.to_string())
+    )?.map(|arcstr| arcstr.to_string())
     .collect())
 }

@@ -5,13 +5,12 @@
 
 
 
-use scanit::{IntoIter, StaticStr,io::{Result,stdout, Write, BufWriter}};
-const BUFFER_SIZE: usize = 2 * 1024 * 1024;
-const FLUSH_THRESHOLD: usize = BUFFER_SIZE - (BUFFER_SIZE / 20);
-const NEWLINE:&[u8; 1]=b"\n";
+use scanit::{IntoIter, ArcStr,io::{Result,stdout, Write, BufWriter},FLUSH_THRESHOLD,BUFFER_SIZE,NEWLINE};
+
+
 #[allow(clippy::inline_always)]
 #[inline(always)]
-pub fn write_paths(paths: IntoIter<StaticStr>, limit: Option<usize>) -> Result<()> {
+pub fn write_paths(paths: IntoIter<ArcStr>, limit: Option<usize>) -> Result<()> {
     let mut writer = BufWriter::with_capacity(BUFFER_SIZE, stdout());
     if limit.is_some(){
     for path in paths.take(limit.unwrap()) {

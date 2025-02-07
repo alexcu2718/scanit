@@ -1,7 +1,6 @@
 
-use scanit::{DOT_PATTERN,START_PREFIX,current_dir};
+use scanit::{DOT_PATTERN,START_PREFIX,current_dir,ESCAPE_REGEX};
 
-const ESCAPE_REGEX:[char;14]=['[', ']', '(', ')', '{', '}', '.', '*', '+', '?', '^', '$', '\\', '|'];
 
 #[allow(clippy::must_use_candidate)]
 #[inline(never)]
