@@ -71,6 +71,7 @@ I have not investigate how it works on Windows for this release yet!
 | [ignore](https://crates.io/crates/ignore) | 0.4.23 | Fast parallel directory traversal |
 | [jemallocator](https://crates.io/crates/jemallocator) | 0.5.4| Memory allocation optimisation |
 | [arcstr](https://crates.io/crates/arcstr) | 1.2.0| Better reference counted string types |
+| [thiserror](https://crates.io/crates/thiserror) | 2.0.11| Better error handling |
 
 ## Examples
 
