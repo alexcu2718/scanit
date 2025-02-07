@@ -4,7 +4,7 @@ A command-line utility that recursively searches directories for files matching 
 
 Notably this is my first rust cli. It's probably redundant in favour of fd. It is faster in certain cases(if you don't want to search directories), and probably easier to use!
 
-## 🚀 Features
+## Features
 
 - Unix and Windows Compatible
 - Recursive directory scanning
@@ -13,15 +13,23 @@ Notably this is my first rust cli. It's probably redundant in favour of fd. It i
 - Cross-platform compatibility (Unix and Windows)
 - Current directory search option
 
-## ⚙️ Installation
+## Installation
 
 ```bash
 cargo install scanit
 ```
 
-## 📝 Changelog
+## Changelog
 
-### Version=[0.3.5] 🚀
+### Version=[0.3.6]
+
+Simplified code base a bit, added thiserror for better error handling(it shouldn't return errors for missed file paths due to permissions errors, because this will happen a lot!)
+
+Added path checking to check if valid path.
+
+Started to use arcstr crate due to avoiding less memory allocations.
+
+### Version=[0.3.5]
 
 Added a different memory allocator for Linux, this should speed up processing.
 
@@ -34,7 +42,7 @@ Added configuration options:
 
 Better error handling yet again(I will probably use thiserror/anyhow in my next iteration)
 
-### Version=[0.3.3] 🚀
+### Version=[0.3.3]
 
 Changed underlying structure to use parallel processing
 Added configuration options:
@@ -54,19 +62,7 @@ Simplified CLI arguments for directory to eg scanit \.py$ [DIRECTORY] (defaults 
 
 I have not investigate how it works on Windows for this release yet!
 
-### version=[0.2.5]
-
-Changed underlying structure to better enable use as a library.
-
-Mostly, this means that now the find files returns an Iterator, which allows the collect method(or iteration)
-
-Added a case-insensitivity option.
-
-Increased performance again, roughly about 30% on my limited tests
-
-Lowered Rust Version required to 1.74.1 for people on older Rust versions.
-
-## 🔧 Dependencies
+## Dependencies
 
 | Dependency | Version | Description |
 |:-----------|:--------|:------------|

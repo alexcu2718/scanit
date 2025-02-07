@@ -1,6 +1,15 @@
 
-use scanit::{DOT_PATTERN,START_PREFIX,current_dir,ESCAPE_REGEX};
+use scanit::{current_dir,Path,process_exit,START_PREFIX};
 
+
+
+
+const DOT_PATTERN:&str=".";
+
+
+
+/// Regex characters to avoid
+const ESCAPE_REGEX:[char;14]=['[', ']', '(', ')', '{', '}', '.', '*', '+', '?', '^', '$', '\\', '|'];
 
 #[allow(clippy::must_use_candidate)]
 #[inline(never)]
@@ -14,7 +23,14 @@ pub fn resolve_directory(args_cd: bool, args_directory: Option<String>) -> Strin
             |path_res| path_res.to_str().map_or_else(||DOT_PATTERN.into(),Into::into)
         )
     } else {
-        args_directory.unwrap_or_else(|| START_PREFIX.into())
+
+        let dir_to_use=args_directory.unwrap_or_else(|| START_PREFIX.into());
+        let path_check=Path::new(&dir_to_use);
+        if !path_check.is_dir(){
+            eprintln!("{dir_to_use} is not a directory");
+            process_exit(1)
+        };
+        dir_to_use
 
     }
 }

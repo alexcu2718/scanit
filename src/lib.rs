@@ -29,16 +29,56 @@
 pub static ALLOCATOR: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 pub use std::path::Path;
-pub use ignore::{DirEntry, ParallelVisitor, ParallelVisitorBuilder, WalkBuilder, WalkState};
+pub use ignore::{DirEntry, ParallelVisitor, ParallelVisitorBuilder, WalkBuilder, WalkState,Error as WalkError};
 pub use regex::{Regex, RegexBuilder,Error as RegexError};
 pub use std::io;
 pub use std::process::exit as process_exit;
 pub use std::sync::mpsc::{channel as unbounded,IntoIter,SendError,Sender};
 pub use std::env::current_dir;
 pub use arcstr::ArcStr;
-mod constants;
-pub use constants::{AVOID,START_PREFIX,DOT_PATTERN,DEPTH_CHECK,FLUSH_THRESHOLD,BUFFER_SIZE,NEWLINE,ESCAPE_REGEX};
 
+use std::io::Error as IoError;
+use thiserror::Error;
+
+
+
+
+
+
+
+
+
+/// System paths to avoid during file scanning
+#[cfg(unix)]
+pub const AVOID: [&str; 6] = ["/proc", "/sys", "/tmp", "/run", "/dev", "/sbin"];
+
+/// System paths to avoid during file scanning
+#[cfg(windows)]
+pub const AVOID: [&str; 4] = [r"C:\Windows\System32",r"C:\Windows\SysWOW64",r"C:\Windows\Temp",r"C:\$Recycle.Bin"];
+
+
+///Default Start Prefix to use, defaults to "/" on Unix, "C:/" on Windows.
+pub const START_PREFIX: &str =if cfg!(unix){"/"}else{r"C:/"};
+
+
+/// INTERNAL HEURISTIC USED FOR AVOIDING SYSPATHS
+const DEPTH_CHECK: usize = if cfg!(unix) { 1 } else { 3 };
+
+
+
+
+
+#[derive(Error, Debug)]
+pub enum ScanError {
+    #[error("I/O error: {0}")]
+    Io(#[from] IoError),
+    #[error("Regex error, consider using -r to escape the Regex: {0:?}")]
+    Regex(#[from] RegexError),
+    #[error("Directory traversal error: {0}")]
+    Walk(#[from] WalkError),
+    #[error("Channel send error: {0}")]
+    Send(#[from] SendError<ArcStr>),
+}
 
 /// Checks if a given path should be excluded from system paths
 /// 
@@ -65,77 +105,37 @@ fn path_to_str(pathname: &DirEntry, keep_dirs: bool) -> Option<&str> {
     pathname.path().to_str()
 }
 
-#[doc(hidden)]
-#[inline(never)]
-#[cold]
-pub fn handle_regex_error(pattern: &str, error: &RegexError)->!  {
-    eprintln!("Error: Invalid regex pattern '{pattern}'\nDetails: {error}\nConsider Using -r to escape the Regex\n");
-    process_exit(1)
-}
-
 
 #[doc(hidden)]
 #[allow(clippy::inline_always)]
 #[inline(always)]
-fn process_file(
-    filename: &str,
-    re: Option<&Regex>,
-    tx: &Sender<ArcStr>,
-    is_dot: bool,
-) -> WalkState {
+fn process_file(filename: &str,re: Option<&Regex>,tx: &Sender<ArcStr>,is_dot: bool,) -> WalkState {
     
-    if is_dot || re.is_some_and(|search| search.is_match(filename)) {
-        match tx.send(ArcStr::from(filename)) {
-            Ok(()) => WalkState::Continue,
-            Err(_) => WalkState::Skip
+if is_dot || re.is_some_and(|search| search.is_match(filename)) {
+    match tx.send(ArcStr::from(filename)) {
+        Ok(()) => WalkState::Continue,
+        Err(_) => WalkState::Skip
+    }
+} else {
+    WalkState::Continue
+}
+}
+
+
+
+fn build_regex(pattern: &str,case_sensitive: bool)->Result<Regex,ScanError>{
+match RegexBuilder::new(pattern)
+    .case_insensitive(case_sensitive)
+    .build() {
+        Ok(regex_good) => Ok(regex_good),
+        Err(error) => {
+            eprintln!("Invalid Regex, consider using -r or --regex-escape to avoid this\n");
+            Err(ScanError::Regex(error))
         }
-    } else {
-        WalkState::Continue
     }
 }
 
-#[doc(hidden)]
-struct FileWalkerBuilder<'a> {
-    tx: Sender<ArcStr>,
-    re: Option<&'a Regex>,
-    is_dot: bool,
-    keep_dirs: bool,
-}
 
-#[doc(hidden)]
-struct FileWalkerVisitor<'a> {
-    tx: Sender<ArcStr>,
-    re: Option<&'a Regex>,
-    is_dot: bool,
-    keep_dirs: bool,
-}
-
-
-impl ParallelVisitor for FileWalkerVisitor<'_> {
-
-    
-    #[inline]
-    fn visit(&mut self, entry: Result<DirEntry, ignore::Error>) -> WalkState {
-        if let Ok(entry_path) = entry {
-            if let Some(filename) = path_to_str(&entry_path, self.keep_dirs) {
-                return process_file(filename, self.re, &self.tx, self.is_dot);
-            }
-        }
-        WalkState::Continue
-    }
-}
-
-impl<'a> ParallelVisitorBuilder<'a> for FileWalkerBuilder<'a> {
-    #[inline]
-    fn build(&mut self) -> Box<dyn ParallelVisitor + 'a> {
-        Box::new(FileWalkerVisitor {
-            tx: self.tx.clone(),
-            re: self.re,
-            is_dot: self.is_dot,
-            keep_dirs: self.keep_dirs,
-        })
-    }
-}
 
 
 /// Creates an iterator over files matching the given pattern
@@ -192,15 +192,13 @@ pub fn find_files_iter(
     keep_dirs: bool,
     keep_sys_paths: bool,
     max_depth: Option<usize>,
-) ->  Result<IntoIter<ArcStr>, io::Error> {
+) -> Result<IntoIter<ArcStr>, ScanError> {
     let (tx, rx) = unbounded::<ArcStr>();
-    let is_dot = pattern == DOT_PATTERN;
-    let re: Option<Regex> = if is_dot {None
+    let is_dot = pattern == ".";
+    let re: Option<Regex> = if is_dot {
+        None
     } else {
-        Some(RegexBuilder::new(pattern)
-        .case_insensitive(case_sensitive)
-        .build()
-        .unwrap_or_else(|e| handle_regex_error(pattern, &e)))
+        Some(build_regex(pattern,case_sensitive)?)
     };
     WalkBuilder::new(path)
         .hidden(!hide_hidden)
@@ -214,15 +212,20 @@ pub fn find_files_iter(
         .max_depth(max_depth)
         .threads(thread_count)
         .build_parallel()
-        .visit(&mut FileWalkerBuilder {
-            tx,
-            re:re.as_ref(),
-            is_dot,
-            keep_dirs,
+        .run(|| {
+            let tx = tx.clone();
+            let re = re.as_ref();
+            Box::new(move |entry: Result<DirEntry, WalkError>| -> WalkState {
+                entry.map_or(WalkState::Continue, |entry_path| {
+                    path_to_str(&entry_path, keep_dirs).map_or(WalkState::Continue, |filename| {
+                        process_file(filename, re, &tx, is_dot)
+                    })
+                })
+            })
         });
-
     Ok(rx.into_iter())
 }
+
 
 /// Collects matching file paths into a vector
 ///
@@ -282,7 +285,7 @@ pub fn find_files(
     keep_dirs: bool,
     keep_sys_paths: bool,
     max_depth: Option<usize>,
-) -> Result<Vec<String>, io::Error> {
+) -> Result<Vec<String>, ScanError> {
     Ok(find_files_iter(
         pattern,
         path,
@@ -292,6 +295,7 @@ pub fn find_files(
         keep_dirs,
         keep_sys_paths,
         max_depth,
-    )?.map(|arcstr| arcstr.to_string())
+    )?
+    .map(|arcstr| arcstr.to_string())
     .collect())
 }

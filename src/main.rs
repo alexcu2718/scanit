@@ -5,7 +5,7 @@ mod printer;
 use printer::write_paths;
 mod convenience_functions;
 use convenience_functions::{get_threads, resolve_directory,escape_regex_string};
-use scanit::{find_files_iter, AVOID,START_PREFIX,io,Path,process_exit};
+use scanit::{find_files_iter, AVOID,START_PREFIX,ScanError};
 use clap::Parser;
 
 #[derive(Parser)]
@@ -74,33 +74,19 @@ pub struct Args {
 
 
 
-fn main() -> io::Result<()> {
+fn main() -> Result<(),ScanError> {
     let args: Args = Args::parse();
-
-   let directory_to_use=&resolve_directory(args.cd, args.directory);
-
-   let path=Path::new(directory_to_use);
    
-   if !path.exists() {
-   eprintln!("Error: Path '{directory_to_use}' does not exist");
-   process_exit(1);
-   }
-
-   if !path.is_dir() {
-   eprintln!("Error: Path '{directory_to_use}' is not a directory");
-   process_exit(1);
-   }
 
    let files = find_files_iter(
        &escape_regex_string(&args.pattern, args.regex_escape),
-       directory_to_use,
+       &resolve_directory(args.cd, args.directory),
        args.hidden,
        args.case,
        args.thread_num,
        args.keep_dirs,
        args.keep_sys_paths,
        args.max_depth)?;
-    //eprintln!("{}",args.thread_num);
 
     write_paths(files, args.top_n)?;
    

@@ -5,7 +5,12 @@
 
 
 
-use scanit::{IntoIter, ArcStr,io::{Result,stdout, Write, BufWriter},FLUSH_THRESHOLD,BUFFER_SIZE,NEWLINE};
+use scanit::{IntoIter, ArcStr,io::{Result,stdout, Write, BufWriter}};
+
+
+const BUFFER_SIZE: usize = 2 * 1024 * 1024;
+const FLUSH_THRESHOLD: usize = BUFFER_SIZE - (BUFFER_SIZE / 20);
+const NEWLINE:&[u8; 1]=b"\n";
 
 
 #[allow(clippy::inline_always)]
