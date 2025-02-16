@@ -21,6 +21,65 @@ cargo install scanit
 
 ## Changelog
 
+### Version=[0.3.7]
+
+#### Breaking Change
+
+Changed the structure of the code to work on bytes.
+The convenience function 'find_files' now returns an OsString (because I prefer to leave this option to the caller)
+
+#### New Features
+
+##### Shell Completions
+
+- Added shell completion support
+- Setup command:
+
+Put the following into your respective shell config
+
+  ```bash
+  eval "$(scanit --generate $SHELL_NAME)"
+  ```
+
+- Supported shells: `bash`, `elvish`, `fish`, `powershell`, `zsh`
+
+##### Glob Pattern Search
+
+- Added `-g` flag for glob-style pattern matching
+- Searches entire path names
+- Examples:
+
+  ```bash
+  scanit "**py3**.py" -g    # Find Python files with 'py3' in path
+  ```
+
+##### Full/Short path file matching
+
+Added an option to search full paths/file ends only
+NOTE: glob works on full paths by default.
+
+#### Experimental WIP feature
+
+I've added an option --colour option (also aliased to --color for yanks, basically it colours depending on file extension endings), I've not tested it too much, I still have a lot to work on.
+Such as implementing a file config option for it.
+Don't expect much, it carries a MINOR bit of overhead.
+
+#### Bug Fixes
+
+- Fixed regex matching to only work on filenames(not on glob though)
+- Improved output handling for non-UTF8 characters
+  - Switched to byte-based regex implementation
+  - Enhanced output handling for better compatibility
+
+#### Future Plans
+
+- **Planned Features:**
+  - File type matching support
+- **Under Consideration:**
+  - Colored LS-style output
+  - File type search based on extensions
+  - Note: Performance-optimised version using SIMD exists but requires nightly Rust
+
 ### Version=[0.3.6]
 
 Simplified code base a bit, added thiserror for better error handling(it shouldn't return errors for missed file paths due to permissions errors, because this will happen a lot!)
@@ -41,37 +100,6 @@ Added configuration options:
 - Top n results, show the first n results (These cannot be sorted within rewriting a bit, TODO?)
 
 Better error handling yet again(I will probably use thiserror/anyhow in my next iteration)
-
-### Version=[0.3.3]
-
-Changed underlying structure to use parallel processing
-Added configuration options:
-
-- Thread count control (-n)
-- Depth limit (-d)
-- Result limit (-t)
-
-Better error handling
-
-### Version=[0.3.0]
-
-It should be a lot faster now!
-Changed main directory traversing library to ignore.
-
-Simplified CLI arguments for directory to eg scanit \.py$ [DIRECTORY] (defaults to root)
-
-I have not investigate how it works on Windows for this release yet!
-
-## Dependencies
-
-| Dependency | Version | Description |
-|:-----------|:--------|:------------|
-| [regex](https://crates.io/crates/regex) | 1.11.1 | Regular expression pattern matching |
-| [clap](https://crates.io/crates/clap) | 4.5.27 | Command line argument parsing |
-| [ignore](https://crates.io/crates/ignore) | 0.4.23 | Fast parallel directory traversal |
-| [jemallocator](https://crates.io/crates/jemallocator) | 0.5.4| Memory allocation optimisation |
-| [arcstr](https://crates.io/crates/arcstr) | 1.2.0| Better reference counted string types |
-| [thiserror](https://crates.io/crates/thiserror) | 2.0.11| Better error handling |
 
 ## Examples
 
@@ -127,15 +155,19 @@ Note: Options can go before or after arguments.
 ### Options
 
 | Option | Description | Default |
-|:-------|:-----------|:---------|
+|:-------|:------------|:---------|
 | `-c, --current-directory` | Uses the current directory to load | - |
 | `-a, --show-hidden` | Shows hidden files (e.g. .gitignore, .bashrc) | - |
 | `-e, --case-insensitive` | Enable case-insensitive matching | - |
-| `-n, --num-threads <THREAD_NUM>` | Number of threads to use | Available CPU threads minus 1|
+| `-n, --num-threads <THREAD_NUM>` | Number of threads to use | Available CPU threads minus 1 |
 | `-i, --include-dirs` | Include directories in search results | - |
 | `-s, --sys-paths` | Include system paths (/proc, /sys, /tmp, /run, /dev, /sbin) | - |
 | `-d, --depth <MAX_DEPTH>` | Maximum search depth in directories | - |
 | `-t, --top <TOP_N>` | Retrieve first N results (no sorting supported) | - |
-| `-r, --regex-escape` | Perform literal search instead of regex | - |
+| `-r, --regex-escape` | Perform literal search (conflicts with `--glob`) | - |
+| `--generate` | Generate completions [bash, elvish, fish, powershell, zsh] | - |
+| `-g, --glob` | Use glob pattern matching (conflicts with `--regex-escape` and `--full-path`) | - |
+| `--colour` | Colour output depending on file extension, it's not extensive yet. WIP | - |
+| `-f, --full-path` | Match regex against full path (conflicts with `--glob`) | - |
 | `-h, --help` | Print help information | - |
 | `-V, --version` | Show version number | - |

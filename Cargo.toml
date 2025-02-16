@@ -1,6 +1,6 @@
 [package]
 name = "scanit"
-version = "0.3.6"
+version = "0.3.7"
 rust-version = "1.74.1"
 edition = "2021"
 description = "A fast, multi-threaded filesystem search tool"
@@ -11,13 +11,15 @@ keywords = ["search", "filesystem", "parallel", "regex", "cli"]
 categories = ["filesystem", "command-line-utilities", "concurrency"]
 
 [dependencies]
-arcstr = "1.2.0"
+clap_complete = "4.5.44"
 clap = { version = "4.4", features = ["derive"] }
 ignore = "0.4.23"
-regex = "1.11.1"
+regex = { version = "1.11.1", features = ["perf-dfa-full"] }
 thiserror = "2.0.11"
-[target.'cfg(target_os = "linux")'.dependencies]
-jemallocator = "0.5.4"
+mimalloc = "0.1.43"
+fnmatch-regex2 = "0.3.0"
+nu-ansi-term = "0.50.1"
+
 
 
 [profile.release]

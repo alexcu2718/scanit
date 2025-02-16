@@ -6,6 +6,7 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::fn_params_excessive_bools)]
 #![allow(clippy::struct_excessive_bools)]
+#![allow(clippy::multiple_crate_versions)]
 
 
 //!CLI TOOL FOR SEARCHING FILE PATHS
@@ -17,68 +18,34 @@
 //! - Handle both Unix and Windows paths
 //! - Process directories in parallel
 
-//redundant checks on this 
-#[cfg(all(
-    not(windows),
-    not(target_os = "android"),
-    not(target_os = "macos"),
-    not(target_os = "freebsd"),
-    target_os="linux"
-))]
+
 #[global_allocator]
-pub static ALLOCATOR: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
+pub use std::ffi::OsString;
+use std::path::PathBuf;
+use ignore::{DirEntry,WalkBuilder, WalkState};
+use regex::{bytes::RegexBuilder as RegexBuilder,bytes::Regex};
+use std::process::exit as process_exit;
+pub use std::sync::mpsc::{channel as unbounded,IntoIter};
+use fnmatch_regex2::glob_to_regex;
+pub type BoxBytes=Box<[u8]>;
+use std::sync::OnceLock;
+use std::collections::HashSet;
+mod process_entries;
+use process_entries::{process_entry_shortpath,process_entry_fullpath};
+mod constants;
+mod config;
+pub use config::SearchConfig;
+mod error;
+pub use error::ScanError;
+use constants::{DOT_PATTERN,DEPTH_CHECK};
+pub use constants::{START_PREFIX,AVOID};
 
-pub use std::path::Path;
-pub use ignore::{DirEntry, ParallelVisitor, ParallelVisitorBuilder, WalkBuilder, WalkState,Error as WalkError};
-pub use regex::{Regex, RegexBuilder,Error as RegexError};
-pub use std::io;
-pub use std::process::exit as process_exit;
-pub use std::sync::mpsc::{channel as unbounded,IntoIter,SendError,Sender};
-pub use std::env::current_dir;
-pub use arcstr::ArcStr;
-
-use std::io::Error as IoError;
-use thiserror::Error;
-
-
-
-
-
-
-
-
-
-/// System paths to avoid during file scanning
-#[cfg(unix)]
-pub const AVOID: [&str; 6] = ["/proc", "/sys", "/tmp", "/run", "/dev", "/sbin"];
-
-/// System paths to avoid during file scanning
-#[cfg(windows)]
-pub const AVOID: [&str; 4] = [r"C:\Windows\System32",r"C:\Windows\SysWOW64",r"C:\Windows\Temp",r"C:\$Recycle.Bin"];
-
-
-///Default Start Prefix to use, defaults to "/" on Unix, "C:/" on Windows.
-pub const START_PREFIX: &str =if cfg!(unix){"/"}else{r"C:/"};
-
-
-/// INTERNAL HEURISTIC USED FOR AVOIDING SYSPATHS
-const DEPTH_CHECK: usize = if cfg!(unix) { 1 } else { 3 };
+static AVOID_PATHS: OnceLock<HashSet<PathBuf>> = OnceLock::new();
 
 
 
 
-
-#[derive(Error, Debug)]
-pub enum ScanError {
-    #[error("I/O error: {0}")]
-    Io(#[from] IoError),
-    #[error("Regex error, consider using -r to escape the Regex: {0:?}")]
-    Regex(#[from] RegexError),
-    #[error("Directory traversal error: {0}")]
-    Walk(#[from] WalkError),
-    #[error("Channel send error: {0}")]
-    Send(#[from] SendError<ArcStr>),
-}
 
 /// Checks if a given path should be excluded from system paths
 /// 
@@ -88,214 +55,219 @@ pub enum ScanError {
 /// # Returns
 /// * `true` if the path should be included
 /// * `false` if the path should be excluded
-#[allow(clippy::inline_always)]
-#[inline(always)]
-fn avoid_sys_paths(filepath: &Path) -> bool {
-    !AVOID.iter().any(|pathname| filepath.starts_with(pathname) )
-}
-    
-
-#[doc(hidden)]
-#[allow(clippy::inline_always)]
-#[inline(always)]
-fn path_to_str(pathname: &DirEntry, keep_dirs: bool) -> Option<&str> {
-    if !keep_dirs && pathname.file_type()?.is_dir() {
-        return None;
-    }
-    pathname.path().to_str()
+fn avoid_sys_paths(path_entry: &DirEntry) -> bool {
+    if path_entry.depth()>DEPTH_CHECK{return true}
+    let paths = AVOID_PATHS.get_or_init(|| {AVOID.iter().map(PathBuf::from).collect::<HashSet<_>>() });
+    !paths.contains(path_entry.path())
 }
 
-
-#[doc(hidden)]
-#[allow(clippy::inline_always)]
-#[inline(always)]
-fn process_file(filename: &str,re: Option<&Regex>,tx: &Sender<ArcStr>,is_dot: bool,) -> WalkState {
-    
-if is_dot || re.is_some_and(|search| search.is_match(filename)) {
-    match tx.send(ArcStr::from(filename)) {
-        Ok(()) => WalkState::Continue,
-        Err(_) => WalkState::Skip
-    }
-} else {
-    WalkState::Continue
-}
-}
-
-
-
-fn build_regex(pattern: &str,case_sensitive: bool)->Result<Regex,ScanError>{
-match RegexBuilder::new(pattern)
-    .case_insensitive(case_sensitive)
-    .build() {
-        Ok(regex_good) => Ok(regex_good),
-        Err(error) => {
-            eprintln!("Invalid Regex, consider using -r or --regex-escape to avoid this\n");
-            Err(ScanError::Regex(error))
-        }
-    }
+#[allow(clippy::missing_errors_doc)]
+#[must_use="builds regex but modifies errors to map to custom error type"]
+pub fn build_regex(pattern: &str, case_sensitive: bool) -> Result<Regex, ScanError> {
+    RegexBuilder::new(pattern).case_insensitive(case_sensitive)
+    .build().map_err(ScanError::Regex)
 }
 
 
 
 
-/// Creates an iterator over files matching the given pattern
+#[must_use]
+pub fn process_glob_regex(glob_pattern: &str) -> String {
+    glob_to_regex(glob_pattern).map_or_else(
+        |_| {
+            eprintln!("This can't be processed as a glob pattern");
+            process_exit(1)
+        },
+        |good_pattern| good_pattern.as_str().into(),
+    )
+}
+
+
+
+
+
+
+
+
+
+/// Creates an iterator over files matching the given search configuration.
 ///
 /// # Arguments
-/// * `pattern` - Regex pattern to match against file paths
-/// * `path` - Root directory to start search from
-/// * `hide_hidden` - Whether to skip hidden files/directories
-/// * `case_sensitive` - Whether regex matching should be case sensitive
-/// * `thread_count` - Number of parallel threads to use
-/// * `keep_dirs` - Whether to include directory paths
-/// * `keep_sys_paths` - Whether to include system paths
-/// * `max_depth` - Maximum directory depth to traverse
+///
+/// The search configuration (`SearchConfig`) contains:
+/// * `pattern` - A regex pattern (or a glob pattern if `use_glob` is true) to match against file paths.
+/// * `root` - The root directory from which to start the search.
+/// * `hide_hidden` - Whether to skip hidden files and directories.
+/// * `case_sensitive` - Whether regex matching should be case sensitive.
+/// * `thread_count` - Number of parallel threads to use during traversal.
+/// * `keep_dirs` - Whether to include directory paths in the output.
+/// * `keep_sys_paths` - Whether system paths should be included, overriding default filtering.
+/// * `max_depth` - Maximum directory depth to traverse.
+/// * `use_glob` - If true, the input pattern is treated as a glob pattern.
+/// * `full_path` - If true, matching is performed against the full file path instead of just the filename.
 ///
 /// # Errors
-/// Returns `io::Error` if:
-/// * The regex pattern is invalid
-/// * Directory traversal fails
-/// * File system access is denied
+///
+/// Returns a `ScanError` if:
+/// * The regex (or glob-to-regex conversion) fails to compile.
+/// * Directory traversal fails.
+/// * File system access is denied.
 ///
 /// # Returns
-/// * `Result<IntoIter<StaticStr>, io::Error>` - Iterator of matched paths
+///
+/// * `Result<IntoIter<Box<[u8]>>, ScanError>` - An iterator over matched file paths represented as boxed bytes.
 ///
 /// # Examples
-/// ```
-/// use scanit::find_files_iter;
-/// use std::io;
-///
-/// fn main() -> Result<(), io::Error> {
-///     let iter = find_files_iter(
-///         r".*\.rs$",  // Find Rust files using proper regex
-///         ".",        // Start from current directory
-///         true,       // Hide hidden files
-///         false,      // Case insensitive
-///         4,          // Use 4 threads
-///         false,      // Skip directories
-///         false,      // Skip system paths
-///         Some(5)     // Max depth of 5
-///     )?;
-///
+/// ```rust
+/// use scanit::{find_files_iter, SearchConfig, ScanError};
+/// 
+/// fn main() -> Result<(), ScanError> {
+///     let search_config = SearchConfig {
+///         pattern: r".*\.rs$",
+///         root: ".",
+///         hide_hidden: true,
+///         case_sensitive: false,
+///         thread_count: 4,
+///         keep_dirs: false,
+///         keep_sys_paths: false,
+///         max_depth: Some(5),
+///         use_glob: false,
+///         full_path: false,
+///     };
+///     
+///     let iter = find_files_iter(search_config)?;
+///     
 ///     for path in iter {
-///         println!("{}", &*path);
+///         println!("{:?}", &*path);
 ///     }
+///     
 ///     Ok(())
 /// }
 /// ```
 #[inline]
-pub fn find_files_iter(
-    pattern: &str,
-    path: &str,
-    hide_hidden: bool,
-    case_sensitive: bool,
-    thread_count: usize,
-    keep_dirs: bool,
-    keep_sys_paths: bool,
-    max_depth: Option<usize>,
-) -> Result<IntoIter<ArcStr>, ScanError> {
-    let (tx, rx) = unbounded::<ArcStr>();
-    let is_dot = pattern == ".";
+pub fn find_files_iter(search_config:&SearchConfig) -> Result<IntoIter<BoxBytes>, ScanError> {
+    let (tx, rx) = unbounded::<BoxBytes>();
+    let is_dot = search_config.pattern == DOT_PATTERN;
+
+    let pattern_to_use=if search_config.use_glob{process_glob_regex(search_config.pattern)}else{search_config.pattern.into()};
+
+    
     let re: Option<Regex> = if is_dot {
         None
     } else {
-        Some(build_regex(pattern,case_sensitive)?)
+        Some(build_regex(&pattern_to_use,search_config.case_sensitive)?)
     };
-    WalkBuilder::new(path)
-        .hidden(!hide_hidden)
+   
+    //This just avoids unnecessary boolean checks(trivial but good to do)
+    let conditional_check:bool=search_config.root !=START_PREFIX ||  search_config.keep_sys_paths  ;
+
+    //implementing this switch here improves performance.
+    let process_entry = if search_config.use_glob || search_config.full_path {
+        process_entry_fullpath
+    } else{process_entry_shortpath};
+    
+    WalkBuilder::new(search_config.root)
+        .hidden(!search_config.hide_hidden)
         .filter_entry(move |entry| {
-            keep_sys_paths || entry.depth() > DEPTH_CHECK || avoid_sys_paths(entry.path())
+            conditional_check || avoid_sys_paths(entry)
         })
         .git_global(false)
         .git_ignore(false)
         .git_exclude(false)
         .ignore(false)
-        .max_depth(max_depth)
-        .threads(thread_count)
+        .max_depth(search_config.max_depth)
+        .threads(search_config.thread_count)
         .build_parallel()
         .run(|| {
-            let tx = tx.clone();
-            let re = re.as_ref();
-            Box::new(move |entry: Result<DirEntry, WalkError>| -> WalkState {
-                entry.map_or(WalkState::Continue, |entry_path| {
-                    path_to_str(&entry_path, keep_dirs).map_or(WalkState::Continue, |filename| {
-                        process_file(filename, re, &tx, is_dot)
-                    })
-                })
-            })
+            Box::new(|entry| {entry.map_or(WalkState::Continue, |entry_path| {
+                    process_entry(&entry_path,re.as_ref(),&tx,is_dot,search_config.keep_dirs)})
+                            })
         });
     Ok(rx.into_iter())
 }
 
 
-/// Collects matching file paths into a vector
-///
-/// Convenience wrapper around `find_files_iter` that collects results into a Vec.
-/// This function is useful when you need all results at once rather than processing
-/// them iteratively.
-///
-/// # Arguments
-/// * `pattern` - Regex pattern to match against file paths
-/// * `path` - Root directory to start search from
-/// * `hide_hidden` - Whether to skip hidden files/directories
-/// * `case_sensitive` - Whether regex matching should be case sensitive
-/// * `thread_count` - Number of parallel threads to use
-/// * `keep_dirs` - Whether to include directory paths
-/// * `keep_sys_paths` - Whether to include system paths
-/// * `max_depth` - Maximum directory depth to traverse
-///
-/// # Errors
-/// Returns `io::Error` if:
-/// * The regex pattern is invalid
-/// * Directory traversal fails
-/// * File system access is denied
-///
-/// # Returns
-/// * `Result<Vec<String>, io::Error>` - Vector of matched paths
-///
+
+
+
+
+
+
 /// # Examples
 /// ```
-/// use scanit::find_files;
-/// use std::io;
-///
-/// fn main() -> Result<(), io::Error> {
+/// use scanit::{find_files, ScanError};
+/// 
+/// fn main() -> Result<(), ScanError> {
+///     // Find all Rust source files in current directory
 ///     let files = find_files(
-///         r".*\.rs$",  // Find Rust files using proper regex
-///         ".",        // Start from current directory
-///         true,       // Hide hidden files
-///         false,      // Case insensitive
-///         4,          // Use 4 threads
-///         false,      // Skip directories
-///         false,      // Skip system paths
-///         Some(5)     // Max depth of 5
+///         r"\.rs$",        // Match files ending in .rs
+///         ".",             // Search in current directory
+///         true,            // Skip hidden files
+///         false,           // Case-insensitive matching
+///         4,               // Use 4 parallel threads
+///         false,           // Don't include directory paths
+///         false,           // Skip system paths
+///         Some(5),         // Search up to 5 directories deep
+///         false,           // Use regex (not glob) pattern
+///         false,           // Match against filename only
 ///     )?;
 ///
+///     // Example output: ["main.rs", "lib.rs", "tests/common.rs"]
 ///     for path in files {
-///         println!("{}", path);
+///         println!("{:?}", path);
 ///     }
 ///     Ok(())
 /// }
 /// ```
+/// 
+/// # Errors
+/// Returns `ScanError` if:
+/// * The regex pattern is invalid (`ScanError::Regex`)
+/// * Directory traversal fails (`ScanError::Walk`) 
+/// * File system access is denied (`ScanError::Io`)
+/// * Memory allocation fails during path collection
 #[inline]
 pub fn find_files(
     pattern: &str,
-    path: &str,
+    root: &str,
     hide_hidden: bool,
     case_sensitive: bool,
     thread_count: usize,
     keep_dirs: bool,
     keep_sys_paths: bool,
     max_depth: Option<usize>,
-) -> Result<Vec<String>, ScanError> {
-    Ok(find_files_iter(
+    use_glob:bool,
+    full_path:bool,
+) -> Result<Vec<OsString>, ScanError> {
+
+    let search_config=SearchConfig{
         pattern,
-        path,
+        root,
         hide_hidden,
         case_sensitive,
         thread_count,
         keep_dirs,
         keep_sys_paths,
         max_depth,
+        use_glob,
+        full_path,
+    };
+
+
+
+
+
+    Ok(find_files_iter(
+      &search_config
     )?
-    .map(|arcstr| arcstr.to_string())
-    .collect())
+    .map(|arc_str| unsafe { OsString::from_encoded_bytes_unchecked(Vec::from(arc_str))})
+  
+        // SAFETY: The bytes in arc_str are guaranteed to be valid OsString data
+        // because they were originally created from OsStrings in process_entry_*.rs
+        // and have only been transmitted as raw bytes for performance reasons.
+        // This conversion is safe because:
+        // 1. The original data came from valid OsStrings
+        // 2. The bytes have not been modified during transmission
+        // 3. The platform encoding has not changed during the operation
+    .collect::<Vec<OsString>>())
 }
