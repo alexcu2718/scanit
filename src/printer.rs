@@ -119,7 +119,7 @@ fn write_colored(
 
 #[cfg(unix)]
 pub fn write_paths(
-    paths: Receiver<BoxBytes>,
+    paths: &Receiver<BoxBytes>,
     limit: Option<usize>,
     colour: bool,
 ) -> Result<(), ScanError> {

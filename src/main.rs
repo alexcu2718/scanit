@@ -126,7 +126,7 @@ pub struct Args {
         long = "regex-escape",
         default_value_t = false,
         required = false,
-        help = "Performs a literal search,consult documentation for help"
+        help = "Performs a literal search,use semi quotes to wrap your search"
         
     )]
     regex_escape: bool,
@@ -211,10 +211,10 @@ fn main() -> Result<(), ScanError> {
     
     
     #[cfg(unix)]
-    write_paths(find_files_iter(&search_config)?, args.top_n,args.colour)?;
+    write_paths(&find_files_iter(&search_config)?, args.top_n,args.colour)?;
    
     #[cfg(windows)]
-    write_paths(find_files_iter(&search_config)?, args.top_n)?;
+    write_paths(&find_files_iter(&search_config)?, args.top_n)?;
  
 
     Ok(())

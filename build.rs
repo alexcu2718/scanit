@@ -12,7 +12,7 @@ fn main() {
         println!("cargo:rustc-env=CPU_COUNT={MIN_THREADS}");
       
     }else{
-        println!("cargo:rustc-env=CPU_COUNT={}",num_threads-1);
+        println!("cargo:rustc-env=CPU_COUNT={num_threads}");
     }
         
 

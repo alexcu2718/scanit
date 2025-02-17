@@ -167,7 +167,7 @@ Note: Options can go before or after arguments.
 | `-c, --current-directory` | Uses the current directory to load | - |
 | `-a, --show-hidden` | Shows hidden files (e.g. .gitignore, .bashrc) | - |
 | `-e, --case-insensitive` | Enable case-insensitive matching | - |
-| `-n, --num-threads <THREAD_NUM>` | Number of threads to use | Available CPU threads minus 1 |
+| `-n, --num-threads <THREAD_NUM>` | Number of threads to use | Available CPU threads |
 | `-i, --include-dirs` | Include directories in search results | - |
 | `-s, --sys-paths` | Include system paths (/proc, /sys, /tmp, /run, /dev, /sbin) | - |
 | `-d, --depth <MAX_DEPTH>` | Maximum search depth in directories | - |
