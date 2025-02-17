@@ -21,6 +21,14 @@ cargo install scanit
 
 ## Changelog
 
+### Version=[0.3.8]
+
+Dramatically increased colour selection, sped up colour matching DRAMATICALLY(thanks memchr!).
+Fixed some slight inefficiency in the full path options.
+!!! NOTE I HAVE NOT TESTED THE COLOUR MATCHING ON WINDOWS, THIS IS ON THE LIST TO DO.
+SO COLOUR MATCHING IS NOT AVAILABLE, WILL BE IN NEXT RELEASE.
+The speed is on par or better than fd, with a lot better colours!
+
 ### Version=[0.3.7]
 
 #### Breaking Change

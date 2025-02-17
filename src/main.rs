@@ -111,8 +111,7 @@ pub struct Args {
         short = 'd',
         long = "max-depth",
         required = false,
-        help = "Selects the max depth to go to",
-        help_heading = "SEARCH OPTIONS"
+        help = "Selects the max depth to go to"
     )]
     max_depth: Option<usize>,
     #[arg(

@@ -26,7 +26,7 @@ use std::path::PathBuf;
 use ignore::{DirEntry,WalkBuilder, WalkState};
 use regex::{bytes::RegexBuilder as RegexBuilder,bytes::Regex};
 use std::process::exit as process_exit;
-pub use std::sync::mpsc::{channel as unbounded,IntoIter};
+pub use std::sync::mpsc::{channel as unbounded,Receiver};
 use fnmatch_regex2::glob_to_regex;
 pub type BoxBytes=Box<[u8]>;
 use std::sync::OnceLock;
@@ -115,7 +115,7 @@ pub fn process_glob_regex(glob_pattern: &str) -> String {
 ///
 /// # Returns
 ///
-/// * `Result<IntoIter<Box<[u8]>>, ScanError>` - An iterator over matched file paths represented as boxed bytes.
+/// * `Result<Receiver<Box<[u8]>>, ScanError>` - An iterator over matched file paths represented as boxed bytes.
 ///
 /// # Examples
 /// ```rust
@@ -135,9 +135,9 @@ pub fn process_glob_regex(glob_pattern: &str) -> String {
 ///         full_path: false,
 ///     };
 ///     
-///     let iter = find_files_iter(search_config)?;
 ///     
-///     for path in iter {
+///     
+///     for path in  find_files_iter(&search_config)?.iter() {
 ///         println!("{:?}", &*path);
 ///     }
 ///     
@@ -145,7 +145,7 @@ pub fn process_glob_regex(glob_pattern: &str) -> String {
 /// }
 /// ```
 #[inline]
-pub fn find_files_iter(search_config:&SearchConfig) -> Result<IntoIter<BoxBytes>, ScanError> {
+pub fn find_files_iter(search_config:&SearchConfig) -> Result<Receiver<BoxBytes>, ScanError> {
     let (tx, rx) = unbounded::<BoxBytes>();
     let is_dot = search_config.pattern == DOT_PATTERN;
 
@@ -183,7 +183,7 @@ pub fn find_files_iter(search_config:&SearchConfig) -> Result<IntoIter<BoxBytes>
                     process_entry(&entry_path,re.as_ref(),&tx,is_dot,search_config.keep_dirs)})
                             })
         });
-    Ok(rx.into_iter())
+    Ok(rx)
 }
 
 
@@ -259,7 +259,7 @@ pub fn find_files(
 
     Ok(find_files_iter(
       &search_config
-    )?
+    )?.iter()
     .map(|arc_str| unsafe { OsString::from_encoded_bytes_unchecked(Vec::from(arc_str))})
   
         // SAFETY: The bytes in arc_str are guaranteed to be valid OsString data
