@@ -21,6 +21,11 @@ cargo install scanit
 
 ## Changelog
 
+### Version=[0.3.9]
+
+Increased efficiency of matching algorithm, speed up 
+
+
 ### Version=[0.3.8]
 
 Dramatically increased colour selection, sped up colour matching DRAMATICALLY(thanks memchr!).

@@ -1,44 +1,42 @@
+#![allow(clippy::incompatible_msrv)]
 
 mod printer;
-use printer::write_paths;
-use scanit::{find_files_iter,SearchConfig,ScanError};
-use clap::{Parser, ArgAction, value_parser,ValueHint,CommandFactory,ColorChoice};
+use clap::{value_parser, ArgAction, ColorChoice, CommandFactory, Parser, ValueHint};
 use clap_complete::aot::{generate, Shell};
-use std::process::exit as process_exit;
-use std::env::current_dir;
-use std::path::Path;
-use std::io::stdout;
+use printer::{write_paths_coloured, write_paths_plain};
 use regex::escape as RegexEscape;
+use scanit::{find_files_iter, ScanError, SearchConfig};
+use std::env::current_dir;
+use std::io::stdout;
+use std::path::Path;
+use std::process::exit as process_exit;
 mod constants;
-use constants::{DOT_PATTERN,AVOID,START_PREFIX};
-
-
-
+use constants::{AVOID, DOT_PATTERN, START_PREFIX};
+use std::io::IsTerminal;
 
 ///This is to avoid using the default . pattern, it doesnt show the full path, which considering this is written by a lazy
 /// person like me, i dont like it.
 #[allow(clippy::must_use_candidate)]
 fn resolve_directory(args_cd: bool, args_directory: Option<String>) -> String {
-    if args_cd {
+    if args_cd || args_directory.as_ref().is_some_and(|x| x==DOT_PATTERN) {
         current_dir().map_or_else(
             |_| DOT_PATTERN.into(),
-            |path_res| path_res.to_str().map_or_else(||DOT_PATTERN.into(),Into::into)
+            |path_res| {
+                path_res
+                    .to_str()
+                    .map_or_else(|| DOT_PATTERN.into(), Into::into)
+            },
         )
     } else {
-
-        let dir_to_use=args_directory.unwrap_or_else(|| START_PREFIX.into());
-        let path_check=Path::new(&dir_to_use);
-        if !path_check.is_dir(){
+        let dir_to_use = args_directory.unwrap_or_else(|| START_PREFIX.into());
+        let path_check = Path::new(&dir_to_use);
+        if !path_check.is_dir() {
             eprintln!("{dir_to_use} is not a directory");
             process_exit(1)
         }
         dir_to_use
-
     }
 }
-
-
-
 
 #[derive(Parser)]
 #[command(version = env!("CARGO_PKG_VERSION"))]
@@ -49,15 +47,11 @@ pub struct Args {
         value_name = "PATTERN",
         help = "Pattern to search for",
         required_unless_present = "generate",
-        index=1
-        
-        //value_hint="Pattern to search for"
+        index = 1
     )]
     pattern: Option<String>,
-
     #[arg(
         value_name = "PATH",
-        //required=false,
         help = format!("Path to search (defaults to {START_PREFIX})\nUse -c to do current directory"),
         value_hint=ValueHint::DirPath,
         required=false,
@@ -127,7 +121,6 @@ pub struct Args {
         default_value_t = false,
         required = false,
         help = "Performs a literal search,use semi quotes to wrap your search"
-        
     )]
     regex_escape: bool,
     #[arg(
@@ -138,64 +131,60 @@ pub struct Args {
     )]
     generate: Option<Shell>,
     #[arg(
-        short='g',
+        short = 'g',
         long = "glob",
-        required=false,
-        default_value_t=false,
+        required = false,
+        default_value_t = false,
         help = "Use a glob pattern",
-        conflicts_with="regex_escape"
+        conflicts_with = "regex_escape"
     )]
     glob: bool,
     #[arg(
-        short='f',
+        short = 'f',
         long = "full-path",
-        required=false,
-        default_value_t=false,
+        required = false,
+        default_value_t = false,
         help = "Use a full path for regex matching",
-        conflicts_with="glob"
+        conflicts_with = "glob"
     )]
     full_path: bool,
     #[arg(
         long = "colour",
-        alias="color",
-        required=false,
-        default_value_t=false,
+        alias = "color",
+        required = false,
+        default_value_t = false,
         help = "Use custom colouring, this is WIP!"
     )]
     colour: bool,
 }
 
-
-
-fn escape_regex_string(input: &str,avoid_regex:bool,args_glob:bool) -> String {
-    if !avoid_regex || args_glob{return input.into()}
+fn escape_regex_string(input: &str, avoid_regex: bool, args_glob: bool) -> String {
+    if !avoid_regex || args_glob {
+        return input.into();
+    }
     RegexEscape(input)
 }
-
-
-
-
-
 
 fn main() -> Result<(), ScanError> {
     let args: Args = Args::parse();
 
     if let Some(generator) = args.generate {
         let mut cmd = Args::command();
-        let cmd_clone=cmd.clone();
-        generate(generator,&mut cmd, cmd_clone.get_name().to_string(), &mut stdout());
+        let cmd_clone = cmd.clone();
+        generate(
+            generator,
+            &mut cmd,
+            cmd_clone.get_name().to_string(),
+            &mut stdout(),
+        );
         return Ok(());
     }
 
     let pattern = args.pattern.unwrap_or_else(|| {
         eprintln!("Error: Please provide a search pattern");
         process_exit(1)
-      });
+    });
 
-
-    
-
-    
     let search_config = SearchConfig {
         pattern: &escape_regex_string(&pattern, args.regex_escape, args.glob),
         root: &resolve_directory(args.current_directory, args.directory),
@@ -208,21 +197,14 @@ fn main() -> Result<(), ScanError> {
         use_glob: args.glob,
         full_path: args.full_path,
     };
-    
-    
-    #[cfg(unix)]
-    write_paths(&find_files_iter(&search_config)?, args.top_n,args.colour)?;
-   
-    #[cfg(windows)]
-    write_paths(&find_files_iter(&search_config)?, args.top_n)?;
- 
+
+    let files_to_print = find_files_iter(&search_config)?;
+
+    if args.colour && stdout().is_terminal() {
+        write_paths_coloured(&files_to_print, args.top_n)?;
+    } else {
+        write_paths_plain(&files_to_print, args.top_n)?;
+    }
 
     Ok(())
 }
-
-
-
-
-
-
-

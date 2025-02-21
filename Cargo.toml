@@ -14,13 +14,15 @@ categories = ["filesystem", "command-line-utilities", "concurrency"]
 clap_complete = "4.5.44"
 clap = { version = "4.4", features = ["derive"] }
 ignore = "0.4.23"
-regex = { version = "1.11.1", features = ["perf-dfa-full"] }
+regex = { version = "1.11.1", features = ["perf-dfa-full", "perf-literal", "unicode-perl"] }
 thiserror = "2.0.11"
-mimalloc = "0.1.43"
 fnmatch-regex2 = "0.3.0"
 os_str_bytes = { version = "7.0.0", features = ["conversions"] }
-memchr = "2.7.4"
-
+memchr = { version = "2.7.4", features = ["compiler_builtins"] }
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = "0.5"
+[target.'cfg(target_env = "msvc")'.dependencies]
+mimalloc = "0.1.43"
 
 
 [profile.release]
@@ -28,6 +30,6 @@ lto = true
 codegen-units = 1
 panic = "abort"
 opt-level = 3
-debug = true
+debug = false
 strip= "symbols"
 

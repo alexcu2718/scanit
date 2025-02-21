@@ -1,9 +1,7 @@
-
-
-use std::io::Error as IoError;
-use thiserror::Error;
 use ignore::Error as WalkError;
 use regex::Error as RegexError;
+use std::io::Error as IoError;
+use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum ScanError {
     #[error("I/O error: {0}")]
