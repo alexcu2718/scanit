@@ -18,7 +18,8 @@ regex = { version = "1.11.1", features = ["perf-dfa-full", "perf-literal", "unic
 thiserror = "2.0.11"
 fnmatch-regex2 = "0.3.0"
 os_str_bytes = { version = "7.0.0", features = ["conversions"] }
-memchr = { version = "2.7.4", features = ["compiler_builtins"] }
+memchr = "2.7.4"
+#memchr = { version = "2.7.4", features = ["compiler_builtins"] }
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator = "0.5"
 [target.'cfg(target_env = "msvc")'.dependencies]
