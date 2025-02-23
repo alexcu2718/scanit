@@ -1,4 +1,3 @@
-
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![allow(clippy::single_char_lifetime_names)]
 #![allow(clippy::single_call_fn)]
@@ -17,16 +16,13 @@
 //! - Handle both Unix and Windows paths
 //! - Process directories in parallel
 
-
-
 #[cfg(not(target_env = "msvc"))]
 #[global_allocator]
 static GLOBAL_ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 #[cfg(target_env = "msvc")]
 #[global_allocator]
-static GLOBAL_ALLOC:mimalloc::MiMalloc=mimalloc::MiMalloc;
-
+static GLOBAL_ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 use fnmatch_regex2::glob_to_regex;
 use ignore::{DirEntry, WalkBuilder, WalkState};
@@ -34,18 +30,19 @@ use regex::{bytes::Regex, bytes::RegexBuilder};
 pub use std::ffi::OsString;
 use std::path::PathBuf;
 use std::process::exit as process_exit;
-pub use std::sync::mpsc::{channel as unbounded, Receiver};
+pub use std::sync::mpsc::{channel as unbounded, Receiver,Sender};
 pub type BoxBytes = Box<[u8]>;
 use std::collections::HashSet;
 use std::sync::OnceLock;
 mod process_entries;
 use process_entries::{process_entry_fullpath, process_entry_shortpath};
+pub use process_entries::{FileNameBytes,AsBytes};
 mod config;
 mod constants;
 pub use config::SearchConfig;
 mod error;
-pub use constants::{AVOID, START_PREFIX};
-use constants::{DEPTH_CHECK, DOT_PATTERN};
+use constants::{AVOID, START_PREFIX};
+pub(crate) use constants::{DEPTH_CHECK, DOT_PATTERN};
 pub use error::ScanError;
 
 static AVOID_PATHS: OnceLock<HashSet<PathBuf>> = OnceLock::new();
@@ -58,6 +55,8 @@ static AVOID_PATHS: OnceLock<HashSet<PathBuf>> = OnceLock::new();
 /// # Returns
 /// * `true` if the path should be included
 /// * `false` if the path should be excluded
+#[allow(clippy::inline_always)]
+#[inline(always)]
 fn avoid_sys_paths(path_entry: &DirEntry) -> bool {
     if path_entry.depth() > DEPTH_CHECK {
         return true;
@@ -68,7 +67,7 @@ fn avoid_sys_paths(path_entry: &DirEntry) -> bool {
 
 #[allow(clippy::missing_errors_doc)]
 #[must_use = "builds regex but modifies errors to map to custom error type"]
-pub fn build_regex(pattern: &str, case_sensitive: bool) -> Result<Regex, ScanError> {
+fn build_regex(pattern: &str, case_sensitive: bool) -> Result<Regex, ScanError> {
     RegexBuilder::new(pattern)
         .case_insensitive(case_sensitive)
         .build()
@@ -76,7 +75,7 @@ pub fn build_regex(pattern: &str, case_sensitive: bool) -> Result<Regex, ScanErr
 }
 
 #[must_use]
-pub fn process_glob_regex(glob_pattern: &str) -> String {
+fn process_glob_regex(glob_pattern: &str) -> String {
     glob_to_regex(glob_pattern).map_or_else(
         |_| {
             eprintln!("This can't be processed as a glob pattern");
@@ -119,8 +118,8 @@ pub fn process_glob_regex(glob_pattern: &str) -> String {
 ///
 /// fn main() -> Result<(), ScanError> {
 ///     let search_config = SearchConfig {
-///         pattern: r".*\.rs$",
-///         root: ".",
+///         pattern: r".*\.rs$".into(),
+///         root: ".".into(),
 ///         hide_hidden: true,
 ///         case_sensitive: false,
 ///         thread_count: 4,
@@ -145,9 +144,9 @@ pub fn find_files_iter(search_config: &SearchConfig) -> Result<Receiver<BoxBytes
     let (tx, rx) = unbounded::<BoxBytes>();
 
     let pattern_to_use = if search_config.use_glob {
-        process_glob_regex(search_config.pattern)
+        process_glob_regex(&search_config.pattern)
     } else {
-        search_config.pattern.into()
+        search_config.pattern.clone()
     };
 
     let re: Option<Regex> = if search_config.pattern == DOT_PATTERN {
@@ -167,15 +166,14 @@ pub fn find_files_iter(search_config: &SearchConfig) -> Result<Receiver<BoxBytes
         process_entry_shortpath
     };
 
-    WalkBuilder::new(search_config.root)
+    WalkBuilder::new(&search_config.root)
         .hidden(!search_config.hide_hidden)
-        .filter_entry(move|entry| conditional_check || avoid_sys_paths(entry))
+        .filter_entry(move |entry| conditional_check || avoid_sys_paths(entry))
         .git_global(false)
         .git_ignore(false)
         .git_exclude(false)
         .ignore(false)
         .max_depth(search_config.max_depth)
-        
         .threads(search_config.thread_count)
         .build_parallel()
         .run(|| {
@@ -196,11 +194,10 @@ pub fn find_files_iter(search_config: &SearchConfig) -> Result<Receiver<BoxBytes
     Ok(rx)
 }
 
-
 /// # Examples
 /// ```
 /// use scanit::{find_files, ScanError};
-/// 
+///
 /// fn main() -> Result<(), ScanError> {
 ///     // Find all Rust source files in current directory
 ///     let files = find_files(
@@ -223,11 +220,11 @@ pub fn find_files_iter(search_config: &SearchConfig) -> Result<Receiver<BoxBytes
 ///     Ok(())
 /// }
 /// ```
-/// 
+///
 /// # Errors
 /// Returns `ScanError` if:
 /// * The regex pattern is invalid (`ScanError::Regex`)
-/// * Directory traversal fails (`ScanError::Walk`) 
+/// * Directory traversal fails (`ScanError::Walk`)
 /// * File system access is denied (`ScanError::Io`)
 /// * Memory allocation fails during path collection
 #[inline]
@@ -240,13 +237,12 @@ pub fn find_files(
     keep_dirs: bool,
     keep_sys_paths: bool,
     max_depth: Option<usize>,
-    use_glob:bool,
-    full_path:bool,
+    use_glob: bool,
+    full_path: bool,
 ) -> Result<Vec<OsString>, ScanError> {
-
-    let search_config=SearchConfig{
-        pattern,
-        root,
+    let search_config = SearchConfig {
+        pattern: pattern.to_string(),
+        root: root.into(),
         hide_hidden,
         case_sensitive,
         thread_count,
@@ -257,15 +253,9 @@ pub fn find_files(
         full_path,
     };
 
-
-
-
-
-    Ok(find_files_iter(
-      &search_config
-    )?.iter()
-    .map(|arc_str| unsafe { OsString::from_encoded_bytes_unchecked(arc_str.into()) })
-  
+    Ok(find_files_iter(&search_config)?
+        .iter()
+        .map(|arc_str| unsafe { OsString::from_encoded_bytes_unchecked(arc_str.into()) })
         // SAFETY: The bytes in arc_str are guaranteed to be valid OsString data
         // because they were originally created from OsStrings in process_entry_*.rs
         // and have only been transmitted as raw bytes for performance reasons.
@@ -273,5 +263,5 @@ pub fn find_files(
         // 1. The original data came from valid OsStrings
         // 2. The bytes have not been modified during transmission
         // 3. The platform encoding has not changed during the operation
-    .collect::<Vec<OsString>>())
+        .collect::<Vec<OsString>>())
 }

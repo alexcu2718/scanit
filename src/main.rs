@@ -1,5 +1,3 @@
-#![allow(clippy::incompatible_msrv)]
-
 mod printer;
 use clap::{value_parser, ArgAction, ColorChoice, CommandFactory, Parser, ValueHint};
 use clap_complete::aot::{generate, Shell};
@@ -7,18 +5,22 @@ use printer::{write_paths_coloured, write_paths_plain};
 use regex::escape as RegexEscape;
 use scanit::{find_files_iter, ScanError, SearchConfig};
 use std::env::current_dir;
+use std::env::var;
 use std::io::stdout;
 use std::path::Path;
 use std::process::exit as process_exit;
 mod constants;
 use constants::{AVOID, DOT_PATTERN, START_PREFIX};
-use std::io::IsTerminal;
 
 ///This is to avoid using the default . pattern, it doesnt show the full path, which considering this is written by a lazy
 /// person like me, i dont like it.
 #[allow(clippy::must_use_candidate)]
 fn resolve_directory(args_cd: bool, args_directory: Option<String>) -> String {
-    if args_cd || args_directory.as_ref().is_some_and(|x| x==DOT_PATTERN) {
+    if args_cd
+        || args_directory
+            .as_ref()
+            .is_some_and(|check_dot| check_dot == DOT_PATTERN)
+    {
         current_dir().map_or_else(
             |_| DOT_PATTERN.into(),
             |path_res| {
@@ -185,22 +187,22 @@ fn main() -> Result<(), ScanError> {
         process_exit(1)
     });
 
-    let search_config = SearchConfig {
-        pattern: &escape_regex_string(&pattern, args.regex_escape, args.glob),
-        root: &resolve_directory(args.current_directory, args.directory),
-        hide_hidden: args.hidden,
-        case_sensitive: args.case,
-        thread_count: args.thread_num,
-        keep_dirs: args.keep_dirs,
-        keep_sys_paths: args.keep_sys_paths,
-        max_depth: args.max_depth,
-        use_glob: args.glob,
-        full_path: args.full_path,
-    };
+    let search_config = SearchConfig::new(
+        &escape_regex_string(&pattern, args.regex_escape, args.glob),
+        &resolve_directory(args.current_directory, args.directory),
+        args.hidden,
+        args.case,
+        args.thread_num,
+        args.keep_dirs,
+        args.keep_sys_paths,
+        args.max_depth,
+        args.glob,
+        args.full_path,
+    );
 
     let files_to_print = find_files_iter(&search_config)?;
 
-    if args.colour && stdout().is_terminal() {
+    if args.colour || var("SCANIT_COLOUR").is_ok_and(|check| check.to_lowercase() == "true") {
         write_paths_coloured(&files_to_print, args.top_n)?;
     } else {
         write_paths_plain(&files_to_print, args.top_n)?;

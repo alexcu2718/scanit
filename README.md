@@ -23,8 +23,13 @@ cargo install scanit
 
 ### Version=[0.3.9]
 
-Increased efficiency of matching algorithm, speed up 
+Increased efficiency of matching algorithm for colours.
+Added colours to display as an environment variable.
 
+You can force colours by  by using 'export SCANIT_COLOUR=true' (add it to your shell environment)
+
+Changed memory allocator choices for Linux, kept mimalloc for Windows
+Fixed minor bugs. Unnecessary conversions
 
 ### Version=[0.3.8]
 
