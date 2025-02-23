@@ -26,10 +26,12 @@ cargo install scanit
 Increased efficiency of matching algorithm for colours.
 Added colours to display as an environment variable.
 
-You can force colours by  by using 'export SCANIT_COLOUR=true' (add it to your shell environment)
+You can force colours by using 'export SCANIT_COLOUR=true' (add it to your shell environment)
 
 Changed memory allocator choices for Linux, kept mimalloc for Windows
 Fixed minor bugs. Unnecessary conversions
+
+Tested colours to test if they work on Windows, they will work on powershell, kitty etc, but not basic cmd.
 
 ### Version=[0.3.8]
 

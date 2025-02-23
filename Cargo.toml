@@ -1,6 +1,6 @@
 [package]
 name = "scanit"
-version = "0.3.8"
+version = "0.3.9"
 rust-version = "1.74.1"
 edition = "2021"
 description = "A fast, multi-threaded filesystem search tool"

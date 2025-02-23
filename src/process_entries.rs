@@ -44,6 +44,9 @@ impl AsBytes for DirEntry {
     fn as_true_bytes(&self) -> &[u8] {
         self.path().as_os_str().as_encoded_bytes()
     }
+  
+
+
 }
 
 impl FileNameBytes for DirEntry {
